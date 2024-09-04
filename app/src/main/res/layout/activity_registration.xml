@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="10dp"
+    tools:context=".RegistrationActivity">
+
+
+    <ImageView
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp"
+        android:layout_width="250dp"
+        android:layout_height="100dp"
+        android:src="@drawable/logo"
+        android:id="@+id/logo"
+        />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enroll New User"
+        app:layout_constraintTop_toBottomOf="@id/logo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:id="@+id/title"
+        android:layout_margin="20dp"
+        android:textSize="18sp"
+        android:textColor="@color/black"
+        android:textStyle="bold"
+        />
+
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Name"
+        app:layout_constraintTop_toBottomOf="@id/title"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="40dp"
+        android:textStyle="bold"
+        android:textSize="17sp"
+        android:textColor="@color/black"
+        android:layout_marginStart="10dp"
+        android:id="@+id/tv_name"
+        />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/et_name"
+        app:layout_constraintTop_toBottomOf="@id/tv_name"
+        app:layout_constraintStart_toStartOf="@id/tv_name"
+        android:hint="enter your name"
+        android:layout_marginStart="10dp"
+/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="User Id"
+        app:layout_constraintTop_toBottomOf="@id/et_name"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="40dp"
+        android:textStyle="bold"
+        android:textSize="17sp"
+        android:textColor="@color/black"
+        android:layout_marginStart="10dp"
+        android:id="@+id/tv_position"
+        />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/et_userid"
+        android:inputType="number"
+        app:layout_constraintTop_toBottomOf="@id/tv_position"
+        app:layout_constraintStart_toStartOf="@id/tv_name"
+        android:hint="enter your id"
+        android:layout_marginStart="10dp"
+        />
+
+
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Take a picture"
+        android:id="@+id/tv_image"
+        app:layout_constraintTop_toBottomOf="@id/et_userid"
+        app:layout_constraintStart_toStartOf="@id/tv_name"
+        android:layout_marginTop="30dp"
+        android:textStyle="bold"
+        android:textSize="17sp"
+        android:textColor="@color/black"
+        />
+
+        <Button
+            android:layout_width="170dp"
+            android:layout_height="70dp"
+            android:id="@+id/btn_take_image"
+            app:layout_constraintStart_toStartOf="@id/tv_image"
+            app:layout_constraintTop_toBottomOf="@id/tv_image"
+            android:layout_marginTop="10dp"
+            android:text="Add a picture"
+            android:backgroundTint="@color/purple"
+            />
+
+
+    <Button
+        android:id="@+id/btn_gallery"
+        android:layout_width="170dp"
+        android:layout_height="70dp"
+        android:layout_marginEnd="4dp"
+        android:backgroundTint="@color/purple"
+        android:text="Upload From Gallery"
+        app:layout_constraintBottom_toBottomOf="@id/btn_take_image"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btn_take_image"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <Button
+        android:layout_width="120dp"
+        android:layout_height="70dp"
+        android:text="Enroll"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:textAllCaps="false"
+        android:backgroundTint="@color/purple"
+        android:layout_marginBottom="90dp"
+        android:id="@+id/btn_register"
+        />
+
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_centerInParent="true"
+        android:visibility="gone" /> <!-- Initially hidden -->
+
+</androidx.constraintlayout.widget.ConstraintLayout>
