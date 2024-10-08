@@ -132,6 +132,9 @@ class CameraActivity : AppCompatActivity() {
                         imageCapture // Make sure to bind imageCapture
                     )
                     preview?.setSurfaceProvider(binding.cameraPreview.surfaceProvider)
+
+                    enableFlash() // Enable flashlight after camera initialization
+
                 } catch (e: Exception) {
                     Log.e(TAG, "Use case binding failed", e)
                 }
@@ -186,6 +189,8 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun closeCamera() {
+        camera?.cameraControl?.enableTorch(false) // Turn off the flashlight
+
         cameraProvider?.unbindAll()
         finish()
     }
@@ -206,6 +211,11 @@ class CameraActivity : AppCompatActivity() {
     private fun getOutputDirectory(): File {
         return filesDir
     }
+
+    private fun enableFlash() {
+        camera?.cameraControl?.enableTorch(true)
+    }
+
 
     companion object {
         private const val TAG = "CameraActivity"

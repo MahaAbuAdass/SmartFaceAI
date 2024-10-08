@@ -224,7 +224,7 @@ class MainActivity : AppCompatActivity() {
             val correctedBitmap = correctImageOrientation(bitmap, imageFile.absolutePath)
 
             FileOutputStream(imageFile).use { out ->
-                correctedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                correctedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, out)
             }
 
             Log.d("ImageCorrection", "Image successfully corrected and saved at ${imageFile.absolutePath}")
