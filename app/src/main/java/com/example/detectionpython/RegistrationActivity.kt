@@ -265,16 +265,68 @@ class RegistrationActivity : AppCompatActivity() {
     private fun saveImageToPath(path: String) {
         try {
             val tempImageFile = File(filesDir, "temp_image.jpg")
-            val resizedBitmap = BitmapFactory.decodeFile(tempImageFile.absolutePath)
+
+            // *** Check if the file exists and log error if not ***
+            if (!tempImageFile.exists()) {
+                Log.e("ImageSave", "Temp image file does not exist")
+                return
+            }
+
+            // *** Check if the file is empty ***
+            if (tempImageFile.length() == 0L) {
+                Log.e("ImageSave", "Temp image file is empty")
+                return
+            }
+
+            // *** Downsample the image to reduce memory usage if it's large ***
+            val options = BitmapFactory.Options()
+
+            // First, decode the image with just the out parameters to get its dimensions
+            options.inJustDecodeBounds = true
+            BitmapFactory.decodeFile(tempImageFile.absolutePath, options)
+
+            // Calculate the sample size to scale the image down if it's too large
+            val imageHeight = options.outHeight
+            val imageWidth = options.outWidth
+            val requiredHeight = 800 // You can adjust this as per your requirement
+            val requiredWidth = 800 // You can adjust this as per your requirement
+            var sampleSize = 1
+
+            if (imageHeight > requiredHeight || imageWidth > requiredWidth) {
+                val halfHeight = imageHeight / 2
+                val halfWidth = imageWidth / 2
+
+                // Calculate the largest sample size that fits the required dimensions
+                while ((halfHeight / sampleSize) > requiredHeight && (halfWidth / sampleSize) > requiredWidth) {
+                    sampleSize *= 2
+                }
+            }
+
+            // Decode the image with the calculated sample size
+            options.inJustDecodeBounds = false
+            options.inSampleSize = sampleSize
+
+            val resizedBitmap = BitmapFactory.decodeFile(tempImageFile.absolutePath, options)
+
+            // *** Check if BitmapFactory.decodeFile returns null ***
+            if (resizedBitmap == null) {
+                Log.e("ImageSave", "Failed to decode image at ${tempImageFile.absolutePath}")
+                return
+            }
+
+            // *** Proceed with saving the bitmap to the target path ***
             FileOutputStream(File(path)).use { out ->
                 resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
             }
+
             Log.d("ImageSave", "Image successfully saved at $path")
+
         } catch (e: IOException) {
             e.printStackTrace()
             Log.e("ImageSave", "Failed to save image: ${e.message}")
         }
     }
+
 
     private suspend fun updateFaceEncodings(photoPath: String): String {
 
@@ -288,7 +340,7 @@ class RegistrationActivity : AppCompatActivity() {
 
 
         val python = Python.getInstance()
-        val pythonModule = python.getModule("updateencoding")
+        val pythonModule = python.getModule("enrollment")
 
         return try {
             val result: PyObject = withContext(Dispatchers.IO) {
