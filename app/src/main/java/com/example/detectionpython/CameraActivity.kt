@@ -2,19 +2,14 @@ package com.example.detectionpython
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.Camera
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -28,7 +23,6 @@ import java.util.concurrent.Executors
 class CameraActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCameraBinding
-
     private lateinit var outputDirectory: File
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
@@ -41,39 +35,24 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var handler: Handler
     private var isImageCaptured = false
 
-
-
-    private val checkTooltipRunnable = object : Runnable {
-        override fun run() {
-            checkTooltipText()
-            handler.postDelayed(this, 1000) // Check every 3 seconds
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Lock screen orientation to portrait (or landscape if needed)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         binding = ActivityCameraBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-
-
+        // Initialize output directory and executor
         outputDirectory = getOutputDirectory()
         handler = Handler(Looper.getMainLooper())
         cameraExecutor = Executors.newSingleThreadExecutor()
 
+        // Request permissions
         checkForPermission()
     }
 
-//    override fun onResume() {
-//        super.onResume()
-//        handler.post(checkTooltipRunnable) // Restart checking when activity resumes
-//    }
-
-//    override fun onPause() {
-//        super.onPause()
-//        handler.removeCallbacks(checkTooltipRunnable) // Stop checking when activity pauses
-//    }
-
+    // Method to check permissions (CAMERA permission)
     private fun checkForPermission() {
         if (allPermissionsGranted()) {
             startCamera()
@@ -86,21 +65,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera()
-            } else {
-                Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT)
-                    .show()
-                finish()
-            }
-        }
-    }
-
+    // Method to start the camera with correct configurations
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(
@@ -109,6 +74,7 @@ class CameraActivity : AppCompatActivity() {
 
                 preview = Preview.Builder().build()
 
+                // Set up the image analyzer (for face recognition or other use cases)
                 imageAnalyzer = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
@@ -116,52 +82,61 @@ class CameraActivity : AppCompatActivity() {
                         it.setAnalyzer(cameraExecutor, selectAnalyzer())
                     }
 
-                imageCapture = ImageCapture.Builder().build()
+                // Configure ImageCapture with target rotation (to handle device orientation)
+                imageCapture = ImageCapture.Builder()
+                    .setTargetRotation(window.decorView.rotation.toInt()) // Handle screen orientation changes
+                    .build()
 
+                // Set up the camera selector for front/back camera
                 val cameraSelector = CameraSelector.Builder()
                     .requireLensFacing(cameraSelectorOption)
                     .build()
 
                 try {
-                    cameraProvider?.unbindAll()
+                    cameraProvider?.unbindAll() // Unbind previous use cases
                     camera = cameraProvider?.bindToLifecycle(
                         this,
                         cameraSelector,
                         preview,
                         imageAnalyzer,
-                        imageCapture // Make sure to bind imageCapture
+                        imageCapture
                     )
                     preview?.setSurfaceProvider(binding.cameraPreview.surfaceProvider)
 
-                    enableFlash() // Enable flashlight after camera initialization
+                    enableFlash() // Enable the flash if necessary
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Use case binding failed", e)
                 }
-
-            }, ContextCompat.getMainExecutor(this)
+            },
+            ContextCompat.getMainExecutor(this)
         )
     }
 
-    private fun selectAnalyzer(): ImageAnalysis.Analyzer {
-        val source = intent.getStringExtra("source")?:""
-
-        return FaceContourDetectionProcessor(binding.graphicOverlayFinder, ::updateFaceStatus , source)
+    // Method to enable the flash/torch
+    private fun enableFlash() {
+        camera?.cameraControl?.enableTorch(true)
     }
 
+    // Method to choose the analyzer (face detection, etc.)
+    private fun selectAnalyzer(): ImageAnalysis.Analyzer {
+        val source = intent.getStringExtra("source") ?: ""
+        return FaceContourDetectionProcessor(binding.graphicOverlayFinder, ::updateFaceStatus, source)
+    }
+
+    // Update face status and handle captured photo
     private fun updateFaceStatus(status: FaceStatus) {
         currentFaceStatus = status
-        // Notify the callback about the updated face status
         if (status == FaceStatus.VALID && !isImageCaptured) {
             isImageCaptured = true
             takePhoto()
         }
     }
 
+    // Method to capture photo
     private fun takePhoto() {
         imageCapture?.let { imageCapture ->
             val photoFile = File(outputDirectory, "temp_image.jpg")
-
             val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
             imageCapture.takePicture(
@@ -178,8 +153,8 @@ class CameraActivity : AppCompatActivity() {
                         intent.putExtra("capturedImagePath", photoFile.absolutePath)
                         setResult(Activity.RESULT_OK, intent)
                         handler.postDelayed({
-                            closeCamera()
-                        }, 1000) // Close camera after 3 seconds
+                            closeCamera() // Close the camera after capture
+                        }, 1000)
                     }
                 }
             )
@@ -188,38 +163,29 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    // Method to close the camera after capture
     private fun closeCamera() {
-        camera?.cameraControl?.enableTorch(false) // Turn off the flashlight
-
+        camera?.cameraControl?.enableTorch(false)
         cameraProvider?.unbindAll()
         finish()
     }
 
+    // Check if all required permissions are granted
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
-
-    private fun checkTooltipText() {
-        val status = currentFaceStatus
-        if (status != null && status == FaceStatus.VALID && !isImageCaptured) {
-            Log.d(TAG, "Face status is VALID")
-            // Trigger the photo capture if the status is valid
-            updateFaceStatus(status)
-        }
-    }
-
-    private fun getOutputDirectory(): File {
-        return filesDir
-    }
-
-    private fun enableFlash() {
-        camera?.cameraControl?.enableTorch(true)
-    }
-
 
     companion object {
         private const val TAG = "CameraActivity"
         private const val REQUEST_CODE_PERMISSIONS = 1001
         private val REQUIRED_PERMISSIONS = arrayOf(android.Manifest.permission.CAMERA)
+    }
+
+    // Helper function to get the output directory
+    private fun getOutputDirectory(): File {
+        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+        }
+        return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
     }
 }

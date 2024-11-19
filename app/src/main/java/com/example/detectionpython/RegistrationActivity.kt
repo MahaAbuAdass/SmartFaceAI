@@ -288,7 +288,7 @@ class RegistrationActivity : AppCompatActivity() {
 
 
         val python = Python.getInstance()
-        val pythonModule = python.getModule("updateencoding")
+        val pythonModule = python.getModule("enrollment")
 
         return try {
             val result: PyObject = withContext(Dispatchers.IO) {

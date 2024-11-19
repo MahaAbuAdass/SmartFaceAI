@@ -255,7 +255,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val python = Python.getInstance()
-        val pythonModule = python.getModule("emotion")
+        val pythonModule = python.getModule("identification")
 
         if (pythonModule == null) {
             Log.e("PythonError", "Failed to load Python module")
