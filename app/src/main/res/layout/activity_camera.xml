@@ -7,6 +7,18 @@
     android:layout_height="match_parent"
     tools:ignore="MissingClass">
 
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        />
     <androidx.camera.view.PreviewView
         android:id="@+id/cameraPreview"
         android:layout_width="match_parent"

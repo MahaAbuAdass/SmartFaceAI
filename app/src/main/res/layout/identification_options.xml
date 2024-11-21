@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="30dp"
+    android:background="@drawable/dialogbackground"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Please Choose an Option"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:textColor="@color/black"
+        android:textStyle="bold"
+        android:textSize="24sp"
+        android:id="@+id/title"
+        />
+
+    <Button
+        android:backgroundTint="@color/pink"
+        android:layout_width="200dp"
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:padding="5dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title"
+        android:id="@+id/btn_in"
+        android:layout_marginTop="20dp"
+        android:text="IN"
+        />
+
+    <Button
+        android:textStyle="bold"
+        android:padding="5dp"
+        android:textSize="15sp"
+        android:backgroundTint="@color/pink"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/btn_in"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="out"
+        android:id="@+id/btn_out"
+        />
+
+    <Button
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:padding="5dp"
+        android:backgroundTint="@color/pink"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/btn_out"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="Sick Out"
+        android:id="@+id/btn_sick_out"
+        />
+
+
+    <Button
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:padding="5dp"
+        android:backgroundTint="@color/pink"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/btn_sick_out"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="Personal Out"
+        android:id="@+id/btn_personal_out"
+        />
+
+
+    <Button
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:padding="5dp"
+        android:backgroundTint="@color/pink"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="close"
+        android:layout_marginTop="20dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_personal_out"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:id="@+id/close"
+        />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
