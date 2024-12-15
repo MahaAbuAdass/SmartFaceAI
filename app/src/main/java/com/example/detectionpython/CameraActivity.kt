@@ -14,8 +14,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -58,6 +58,9 @@ class CameraActivity : AppCompatActivity() {
     private var imageAnalyzer: ImageAnalysis? = null
     private var currentFaceStatus: FaceStatus? = null
     private var progressBar: ProgressBar? = null
+
+    private var progressBar2: ProgressBar? = null
+
     private var handler: Handler? = null
     private var isImageCaptured = false
     private var isFromMainActivity = false  // Flag to check where camera is opened from
@@ -66,10 +69,10 @@ class CameraActivity : AppCompatActivity() {
     private var resultTextView: TextView? = null
     private var userName: String? = null
     private var userId: String? = null
-    var livenessValue: Int ?=null
+    var livenessValue: Int? = null
 
     private var isCameraReady = false
-
+    private var isUserNameReturned: Boolean = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,8 +84,8 @@ class CameraActivity : AppCompatActivity() {
         val source = intent.getStringExtra("source")
         isFromMainActivity = source == "mainactivity"  // Set flag if opened from mainactivity
 
-        livenessValue = intent.getIntExtra("liveness",0)
-
+        livenessValue = intent.getIntExtra("liveness", 0)
+        progressBar = binding.progressBar
 
         outputDirectory = getOutputDirectory()
         handler = Handler(Looper.getMainLooper())
@@ -90,10 +93,12 @@ class CameraActivity : AppCompatActivity() {
 
         checkForPermission()
 
+        progressBar2=binding.progressBar
     }
 
     private fun checkForPermission() {
         if (allPermissionsGranted()) {
+
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
@@ -167,7 +172,14 @@ class CameraActivity : AppCompatActivity() {
             if (status == FaceStatus.VALID && !isPopupVisible) {
                 isPopupVisible = true  // Set the flag to avoid multiple popups
                 if (isFromMainActivity) {
-                    showFaceDetectedPopup()
+
+                    handler?.postDelayed(
+                        {
+                            showFaceDetectedPopup()
+                            //       processSavedImage(savedImage)
+
+                        }, 2000
+                    )
                 }
             }
 
@@ -185,40 +197,43 @@ class CameraActivity : AppCompatActivity() {
 
     private fun takePhotoWithoutCloseTheCamera() {
         imageCapture?.let { imageCapture ->
+            // Define the file path where the photo will be saved
             val photoFile = File(outputDirectory, "temp_image.jpg")
 
+            // Define the output options for the saved image
             val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+            // Capture the image asynchronously
             imageCapture.takePicture(
                 outputOptions,
                 ContextCompat.getMainExecutor(this),
                 object : ImageCapture.OnImageSavedCallback {
                     override fun onError(exc: ImageCaptureException) {
+                        // Log any errors that occur during photo capture
                         Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
                         Log.e("cameraaaaaaaa", "cameraaaaaaaa")
 
                     }
 
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                        // Log when the photo is saved successfully
                         Log.d(TAG, "Photo saved successfully: ${photoFile.absolutePath}")
 
+                        // Store the saved image path
                         savedImage = photoFile.absolutePath
+
+                        // Process the saved image (e.g., pass to another function)
                         processSavedImage(savedImage)
 
-
-//                        val intent = Intent()
-//                        intent.putExtra("capturedImagePath", photoFile.absolutePath)
-//                        setResult(Activity.RESULT_OK, intent)
-//                        handler.postDelayed({
-//                            closeCamera()
-//                        }, 1000) // Close camera after 1 second
                     }
                 }
             )
         } ?: run {
+            // Handle case where ImageCapture is not initialized
             Log.e(TAG, "ImageCapture is not initialized")
         }
     }
+
 
     private fun takePhotoWithCloseTheCamera() {
         imageCapture?.let { imageCapture ->
@@ -309,9 +324,13 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private suspend fun processImage(imageFile: File) {
+
+
         Log.v("process image", "process image")
         runOnUiThread {
             progressBar?.visibility = ProgressBar.VISIBLE
+            progressBar?.bringToFront()
+
         }
 
         val python = Python.getInstance()
@@ -405,42 +424,18 @@ class CameraActivity : AppCompatActivity() {
                     val idText =
                         if (status == "success" && id != -1) "ID: $id" else "ID: Not Available"
 
-//                    when(status){
-//                        "error" -> {
-//                            userName = "error"
-//                            userId = "error"
-//                        }
-//                        "success" -> {
-//                            userName = message
-//                            userId = idText
-//                        }
-//                        else -> {
-//                            userName = "else"
-//                            userId = "else"
-//                        }
-//
-//                    }
-
                     userName = when (status) {
                         "error" -> "$message\n\n" +
                                 "$idText\n\n"
-//                                "Light Threshold: $roundedLightThreshold\n\n" +
-//                                "Recognition Threshold: $roundedRecognitionThreshold\n\n" +
-//                                "Liveness Variance: $roundedLivenessVariance"
 
                         "success" ->
                             "$message\n\n" +
                                     "$idText\n\n" +
                                     "Time: $timeAttendance\n\n"
-//                                    "Light Threshold: $roundedLightThreshold\n\n" +
-//                                    "Recognition Threshold: $roundedRecognitionThreshold\n\n" +
-//                                    "Liveness Variance: $roundedLivenessVariance"
+
 
                         else -> "Unknown status: $status\n\n"
-//                                "Light Threshold: $roundedLightThreshold\n\n" +
-//                                "Recognition Threshold: $roundedRecognitionThreshold\n\n" +
-//                                "Liveness Variance: $roundedLivenessVariance\n\n" +
-//                                "$idText"
+
                     }
                 } catch (e: Exception) {
                     Log.e("JsonParsingError", "Failed to parse JSON result: ${e.message}")
@@ -462,6 +457,7 @@ class CameraActivity : AppCompatActivity() {
                 // resultTextView.text = "Error: Python function execution failed."
             }
         }
+        isUserNameReturned = true
     }
 
     private fun copyAssetToFile(assetName: String, file: File) {
@@ -484,27 +480,19 @@ class CameraActivity : AppCompatActivity() {
     @SuppressLint("SuspiciousIndentation", "MissingInflatedId")
     private fun showFaceDetectedPopup() {
 
-
         isPopupVisible = true // Set the flag to true while the popup is visible
 
         // Pause the camera before showing the popup
         pauseCamera()
 
-
         val dialogView = LayoutInflater.from(this).inflate(R.layout.identification_options, null)
 
-        // Create the AlertDialog builder and set the custom layout
         val builder = AlertDialog.Builder(this)
             .setView(dialogView)
 
-        // Create the AlertDialog
         val dialog = builder.create()
 
         dialog.setCanceledOnTouchOutside(false)
-
-
-        // resultTextView = dialogView.findViewById(R.id.result)
-
 
         val inBtn = dialogView.findViewById<Button>(R.id.btn_in)
         val outBtn = dialogView.findViewById<Button>(R.id.btn_out)
@@ -546,38 +534,49 @@ class CameraActivity : AppCompatActivity() {
 
     @SuppressLint("MissingInflatedId")
     private fun showWelcomePopup() {
-        if (isPopupVisible) return // Prevent multiple popups
-
-        isPopupVisible = true // Set the flag to true while the popup is visible
-
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.welcome_dialog, null)
-
-        // Create the AlertDialog builder and set the custom layout
-        val builder = AlertDialog.Builder(this)
-            .setView(dialogView)
-
-        // Create the AlertDialog
-        val dialog = builder.create()
-
-        dialog.setCanceledOnTouchOutside(false)
-
-        val userNameDialog = dialogView.findViewById<TextView>(R.id.tv_name_dialog)
-        //val userIdDialog = dialogView.findViewById<TextView>(R.id.tv_user_id)
-
-        userNameDialog.text = userName
-//        userIdDialog.text = userId
+        progressBar?.visibility = View.VISIBLE // Show the progress bar initially
+        progressBar?.bringToFront()
 
 
-        handler?.postDelayed({
-            dialog.dismiss()
-            resumeCamera()
-            isPopupVisible = false
-        }, 1000) // Close camera after 10 second
+        // Use a handler to periodically check if the username is available
+        handler?.postDelayed(object : Runnable {
+            override fun run() {
+                if (!userName.isNullOrEmpty()) {
+                    // Username is available; proceed to show the popup
+                    progressBar?.visibility = View.GONE // Hide the progress bar
 
-        dialog.setOnDismissListener {
-            isPopupVisible = false // Ensure flag resets if popup is dismissed in any way
-        }
-        dialog.show()
+                    val dialogView = LayoutInflater.from(this@CameraActivity).inflate(R.layout.welcome_dialog, null)
+
+                    // Create the AlertDialog builder and set the custom layout
+                    val builder = AlertDialog.Builder(this@CameraActivity)
+                        .setView(dialogView)
+
+                    // Create the AlertDialog
+                    val dialog = builder.create()
+                    dialog.setCanceledOnTouchOutside(false)
+
+                    val userNameDialog = dialogView.findViewById<TextView>(R.id.tv_name_dialog)
+
+                    // Set the username in the dialog
+                    userNameDialog.visibility = View.VISIBLE
+                    userNameDialog.text = userName
+
+                    handler?.postDelayed({
+                        dialog.dismiss()
+                        resumeCamera()
+                        isPopupVisible = false
+                    }, 3000) // Close popup after 3 seconds
+
+                    dialog.setOnDismissListener {
+                        isPopupVisible = false // Ensure flag resets if popup is dismissed in any way
+                    }
+                    dialog.show()
+                } else {
+                    // Username is still empty; check again
+                    handler?.postDelayed(this, 500) // Check again after 500ms
+                }
+            }
+        }, 0) // Start checking immediately
     }
 
 
@@ -587,6 +586,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun resumeCamera() {
+
         // Rebind the camera use cases to resume the camera
         startCamera()
     }

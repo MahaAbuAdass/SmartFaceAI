@@ -41,22 +41,22 @@ class FaceContourGraphic(
                 textMargin = 70f
                 lineSpacing = 10f
             }
-            "mainactivity" -> {
-                boxStrokeWidth = 5.0f
-                centerTolerance = 0.13f
-                minScreenPercentage = 0.16f
-                textSize = 48f
-                textMargin = 70f
-                lineSpacing = 10f
-            }
 //            "mainactivity" -> {
 //                boxStrokeWidth = 5.0f
-//                centerTolerance = 0.50f
-//                minScreenPercentage = 0.005f
+//                centerTolerance = 0.13f
+//                minScreenPercentage = 0.16f
 //                textSize = 48f
-//                textMargin = 100f
+//                textMargin = 70f
 //                lineSpacing = 10f
 //            }
+            "mainactivity" -> {
+                boxStrokeWidth = 5.0f
+                centerTolerance = 0.50f
+                minScreenPercentage = 0.005f
+                textSize = 48f
+                textMargin = 100f
+                lineSpacing = 10f
+            }
             else -> {
                 // Default values
                 boxStrokeWidth = 5.0f
