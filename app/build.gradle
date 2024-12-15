@@ -26,7 +26,7 @@ android {
         chaquopy {
             python {
                 // buildPython "3.8" // Specify Python version
-                buildPython "C:/Users/USER/AppData/Local/Programs/Python/Python39/python.exe"
+                buildPython "C:/Users/maha/AppData/Local/Programs/Python/Python310/python.exe"
 
 //                pip {
 //                    install "src/main/python/"
