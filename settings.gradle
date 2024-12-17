@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "DetectionPython"
+rootProject.name = "SmartFaceAI"
 include ':app'

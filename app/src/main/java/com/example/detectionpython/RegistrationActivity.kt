@@ -1,7 +1,9 @@
 package com.example.detectionpython
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -24,6 +26,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import android.media.ExifInterface
+import android.view.LayoutInflater
+import android.widget.Button
+import android.widget.TextView
 import com.chaquo.python.PyObject
 import com.chaquo.python.Python
 import org.json.JSONObject
@@ -40,7 +45,7 @@ class RegistrationActivity : AppCompatActivity() {
     private var userName: String = "test"
     private var selectedImageUri: Uri? = null
     private var imageFilePath: String? = null  // Store the image file path here
-    private var userId : Int = 0
+    private var userId: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,7 +62,11 @@ class RegistrationActivity : AppCompatActivity() {
             if (hasCameraPermission()) {
                 openCamera()
             } else {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.CAMERA),
+                    REQUEST_CAMERA_PERMISSION
+                )
             }
         }
 
@@ -79,7 +88,11 @@ class RegistrationActivity : AppCompatActivity() {
             }
 
             if (!photoCaptured && selectedImageUri == null) {
-                Toast.makeText(this, "Please take a picture or select an image from the gallery.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    "Please take a picture or select an image from the gallery.",
+                    Toast.LENGTH_SHORT
+                ).show()
                 return@setOnClickListener
             }
 
@@ -89,63 +102,164 @@ class RegistrationActivity : AppCompatActivity() {
                 Toast.makeText(this, "Please enter your ID.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            userId = userIdText.toIntOrNull() ?: 0
-
-
-
-
-            // Save the image with the correct filename
-            imageFilePath = File(filesDir, "$userName.jpg").absolutePath
-
-            if (photoCaptured) {
-                saveImageToPath(imageFilePath!!)
-            } else if (selectedImageUri != null) {
-                saveImageFromUriToPath(selectedImageUri!!, imageFilePath!!)
-            }
-
-            Log.v("img file path", imageFilePath ?: "No file path")
-
-            // Show loader
-            binding.progressBar.visibility = android.view.View.VISIBLE
-
             CoroutineScope(Dispatchers.IO).launch {
-                val updateMessage = updateFaceEncodings(imageFilePath!!)
-                withContext(Dispatchers.Main) {
-                    // Hide loader
-                    binding.progressBar.visibility = android.view.View.GONE
-
-                    Toast.makeText(this@RegistrationActivity, updateMessage, Toast.LENGTH_LONG).show()
-
-                    // Proceed to the next activity only if the update was successful
-                    if (updateMessage.contains("Registration", ignoreCase = true)) {
-                        val intent = Intent(this@RegistrationActivity, MainActivity::class.java)
-                        startActivity(intent)
-                        finish()  // Optional: Close RegistrationActivity
-                    }
-                }
+                enrollUser(userIdText)
             }
+        }
+    }
+
+    private suspend fun enrollUser(userIdText: String) {
+        userId = userIdText.toIntOrNull() ?: 0
+
+        // Save the image with the correct filename
+        imageFilePath = File(filesDir, "$userName.jpg").absolutePath
+
+        if (photoCaptured) {
+            saveImageToPath(imageFilePath!!)
+        } else if (selectedImageUri != null) {
+            saveImageFromUriToPath(selectedImageUri!!, imageFilePath!!)
+        }
+
+        Log.v("img file path", imageFilePath ?: "No file path")
+
+        // Show loader on the main thread
+        withContext(Dispatchers.Main) {
+            binding.progressBar.visibility = android.view.View.VISIBLE
+        }
+
+        val checkUserId = checkUserId(imageFilePath ?: "")
+
+        // Hide loader on the main thread
+        withContext(Dispatchers.Main) {
+            binding.progressBar.visibility = android.view.View.GONE
+        }
+
+        if (checkUserId.contains("already exists", ignoreCase = true)) {
+            showConfirmationPopup(userId)
+        } else {
+            addNewUser()
+        }
+    }
+
+
+
+
+    private suspend fun addNewUser() {
+
+        val updateMessage = updateFaceEncodings(imageFilePath ?: "")
+        withContext(Dispatchers.Main) {
+            // Hide loader
+            binding.progressBar.visibility = android.view.View.GONE
+
+            Toast.makeText(this@RegistrationActivity, updateMessage, Toast.LENGTH_LONG).show()
+
+            // Proceed to the next activity only if the update was successful
+            if (updateMessage.contains("pdated face for user ID", ignoreCase = true)) {
+                val intent = Intent(this@RegistrationActivity, MainActivity::class.java)
+                startActivity(intent)
+                finish()  // Optional: Close RegistrationActivity
+            }
+        }
+    }
+
+    private fun showConfirmationPopup(userId: Int) {
+        // Switch to the main thread to interact with UI components like AlertDialog
+        CoroutineScope(Dispatchers.Main).launch {
+            val dialogView = LayoutInflater.from(this@RegistrationActivity).inflate(R.layout.existing_id, null)
+
+            val builder = AlertDialog.Builder(this@RegistrationActivity)
+                .setView(dialogView)
+
+            val dialog = builder.create()
+
+            dialog.setCanceledOnTouchOutside(false)
+
+            val title = dialogView.findViewById<TextView>(R.id.title)
+            val noBtn = dialogView.findViewById<Button>(R.id.btn_no)
+            val yesBtn = dialogView.findViewById<Button>(R.id.btn_yes)
+
+            title.text = "Update Face for ID: $userId"
+
+            noBtn.setOnClickListener {
+                dialog.dismiss()
+            }
+
+            yesBtn.setOnClickListener {
+                CoroutineScope(Dispatchers.IO).launch {
+                    addNewUser()
+                }
+                dialog.dismiss()
+            }
+
+            dialog.show()
+        }
+    }
+
+
+
+    private suspend fun checkUserId(photoPath: String): String {
+        val encodingFile = File(filesDir, "face_data.pkl")
+        if (!encodingFile.exists() || encodingFile.length() == 0L) {
+            copyAssetToFile("face_data.pkl", encodingFile)
+        }
+
+        val python = Python.getInstance()
+        val pythonModule = python.getModule("enrollment")
+
+        return try {
+            val result: PyObject = withContext(Dispatchers.IO) {
+                userId?.let { Log.v("user id:", it.toString()) }
+
+                pythonModule.callAttr("IDcheck", encodingFile.absolutePath, userId, photoPath)
+
+            }
+
+            val response = result.toString()  // Convert the response to a String
+            val jsonResponse = JSONObject(response)
+            val message = jsonResponse.optString("message", "No message field in response")
+
+            Log.d("UpdateFaceEncodings", "Response from Python: $message")
+            Log.d("UpdateFaceEncodings", "face path $photoPath")
+            Log.d("UpdateFaceEncodings", "encoding file ${encodingFile.absolutePath}")
+
+            message
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "Failed to update face encodings"
         }
     }
 
     private fun checkAndRequestPermissions() {
         val cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
         if (cameraPermission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CAMERA),
+                REQUEST_CAMERA_PERMISSION
+            )
         }
 
-        val readExternalStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-        } else {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
+        val readExternalStoragePermission =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+            } else {
+                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
 
         if (readExternalStoragePermission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_READ_EXTERNAL_STORAGE)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                REQUEST_READ_EXTERNAL_STORAGE
+            )
         }
     }
 
     private fun hasCameraPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun hasGalleryPermission(): Boolean {
@@ -154,19 +268,32 @@ class RegistrationActivity : AppCompatActivity() {
         } else {
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
-        return ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(
+            this,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestGalleryPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_IMAGES), REQUEST_READ_MEDIA_IMAGES)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
+                    REQUEST_READ_MEDIA_IMAGES
+                )
             }
         } else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    REQUEST_READ_EXTERNAL_STORAGE
+                )
             }
         }
     }
@@ -195,6 +322,7 @@ class RegistrationActivity : AppCompatActivity() {
                         Log.v("paaath", imagePath)
                     }
                 }
+
                 REQUEST_IMAGE_PICK -> {
                     selectedImageUri = data?.data
                     if (selectedImageUri != null) {
@@ -203,8 +331,8 @@ class RegistrationActivity : AppCompatActivity() {
                         Log.v("imgfilepath", imageFilePath!!)
                         Log.v("paaath", imageFilePath!!)
 
-                        correctImageOrientationAndSave(imageFilePath?:"")
-                      //  saveImageFromUriToPath(selectedImageUri!!, imageFilePath!!)
+                        correctImageOrientationAndSave(imageFilePath ?: "")
+                        //  saveImageFromUriToPath(selectedImageUri!!, imageFilePath!!)
 
                     }
                 }
@@ -228,7 +356,8 @@ class RegistrationActivity : AppCompatActivity() {
 
     private fun correctImageOrientation(bitmap: Bitmap, photoPath: String): Bitmap {
         val exif = ExifInterface(photoPath)
-        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        val orientation =
+            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
         val matrix = Matrix()
         when (orientation) {
             ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
@@ -344,9 +473,14 @@ class RegistrationActivity : AppCompatActivity() {
 
         return try {
             val result: PyObject = withContext(Dispatchers.IO) {
-                userId?.let { Log.v("user id:" , it.toString()) }
+                userId?.let { Log.v("user id:", it.toString()) }
 
-                pythonModule.callAttr("update_face_encodings", photoPath, encodingFile.absolutePath ,userId )
+                pythonModule.callAttr(
+                    "update_face_encodings",
+                    photoPath,
+                    encodingFile.absolutePath,
+                    userId
+                )
 
             }
 

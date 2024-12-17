@@ -27,6 +27,24 @@ def preprocess_image(image_path):
     rgb_small_image = cv2.cvtColor(small_image, cv2.COLOR_BGR2RGB)
     return rgb_small_image
 
+def IDcheck(face_data_file, user_id , image_path):
+    """
+    Check if the given user ID already exists in the face data.
+    Returns a JSON response indicating the result.
+    """
+    face_data = load_face_data(face_data_file)
+
+    if user_id in face_data['ids']:
+        response = {
+            "message": f"User ID {user_id} already exists."
+        }
+
+    else:
+        response = update_face_encodings(image_path, face_data_file, user_id)
+
+    return json.dumps(response)
+
+
 def update_face_encodings(new_photo_path, face_data_file, user_id=None):
     response = {'message': None}
     start_time = time.time()  # Start timing
@@ -43,10 +61,6 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
         response['message'] = f"File not found or empty: {new_photo_path}"
         return json.dumps(response)
 
-    if user_id in face_data['ids']:
-        response['message'] = f"User ID {user_id} is already in use."
-        return json.dumps(response)
-
     # Preprocess and encode the image
     rgb_small_image = preprocess_image(new_photo_path)
     encode_start = time.time()
@@ -54,8 +68,30 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
     encode_end = time.time()
     print(f"Encoding time: {encode_end - encode_start:.2f} seconds")
 
-    if encodings:
-        new_encoding = encodings[0]
+    if not encodings:
+        response['message'] = "No faces found in the image."
+        return json.dumps(response)
+
+    new_encoding = encodings[0]
+
+    # Check if the user ID exists
+    if user_id in face_data['ids']:
+        idx = face_data['ids'].index(user_id)
+        existing_encoding = face_data['encodings'][idx]
+
+        # Compare the new encoding with the existing encoding for the user ID
+        distance = np.linalg.norm(existing_encoding - new_encoding)
+        accuracy = 1 - distance
+
+        if accuracy >= 0.6:
+            # Update the encoding for the existing user ID
+            face_data['encodings'][idx] = new_encoding
+            face_data['names'][idx] = os.path.splitext(os.path.basename(new_photo_path))[0]
+            response['message'] = f"Updated face for user ID {user_id}."
+        else:
+            response['message'] = f"The new photo does not match the face for user ID {user_id}."
+    else:
+        # Check if the face is already enrolled under another ID
         if len(face_data['encodings']) > 0:
             distance_start = time.time()
             distances = np.linalg.norm(face_data['encodings'] - new_encoding, axis=1)
@@ -63,24 +99,21 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
             print(f"Distance calculation time: {distance_end - distance_start:.2f} seconds")
 
             min_distance = np.min(distances)
-            accuracy = 1 - min_distance
-
-            if accuracy >= 0.6:
+            if min_distance < 0.5:  # Threshold for matching
                 matched_id = face_data['ids'][np.argmin(distances)]
-                response['message'] = f"The face is enrolled against another ID: {matched_id}"
-            else:
-                face_data["encodings"] = np.append(face_data["encodings"], [new_encoding], axis=0)
-                face_data["names"].append(os.path.splitext(os.path.basename(new_photo_path))[0])
-                face_data["ids"].append(user_id)
-                response['message'] = "Registration Successful"
-        else:
-            face_data["encodings"] = np.array([new_encoding])
-            face_data["names"] = [os.path.splitext(os.path.basename(new_photo_path))[0]]
-            face_data["ids"] = [user_id]
-            response['message'] = "Registration Successful"
-    else:
-        response['message'] = "No faces found in the image."
+                response['message'] = f"The face is already enrolled under another ID: {matched_id}."
+                return json.dumps(response)
 
+        # Add as a new user
+        if len(face_data['encodings']) == 0:
+            face_data['encodings'] = np.array([new_encoding])
+        else:
+            face_data['encodings'] = np.append(face_data['encodings'], [new_encoding], axis=0)
+        face_data['names'].append(os.path.splitext(os.path.basename(new_photo_path))[0])
+        face_data['ids'].append(user_id)
+        response['message'] = f"Added new user with ID {user_id}."
+
+    # Save updated face data to file
     save_start = time.time()
     save_face_data_to_file(face_data, face_data_file)
     save_end = time.time()
@@ -90,3 +123,14 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
     print(f"Total processing time: {end_time - start_time:.2f} seconds")
 
     return json.dumps(response)
+
+
+
+# Assuming `face_data.pkl` is your data file
+face_data_file = r"C:\Users\user\Desktop\PYTHON\API\SmartFace\face_data.pkl"
+new_photo_path = r"G:\HumanFacesDataset\AI-Generated Images\osama.jpg"
+user_id = 9000  # The ID to update or add
+
+# Call the function
+# result = update_face_encodings(new_photo_path, face_data_file, user_id=user_id)
+# print(result)

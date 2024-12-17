@@ -1,0 +1,6 @@
+<!-- res/drawable/progress_bar_circle.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/pink" /> <!-- Set your custom color here -->
+    <corners android:radius="35dp" /> <!-- Make the radius half of the height/width -->
+</shape>
+

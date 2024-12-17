@@ -480,6 +480,10 @@ class CameraActivity : AppCompatActivity() {
     @SuppressLint("SuspiciousIndentation", "MissingInflatedId")
     private fun showFaceDetectedPopup() {
 
+        if (isFinishing || isDestroyed) {
+            return // Exit early if the activity is invalid
+        }
+
         isPopupVisible = true // Set the flag to true while the popup is visible
 
         // Pause the camera before showing the popup
