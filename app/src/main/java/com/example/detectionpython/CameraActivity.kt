@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.hardware.camera2.CameraCharacteristics
 import android.media.ExifInterface
 import android.os.Bundle
 import android.os.Handler
@@ -44,6 +45,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import androidx.lifecycle.lifecycleScope  // Add this import
 
 class CameraActivity : AppCompatActivity() {
 
@@ -109,6 +111,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(
@@ -121,7 +124,13 @@ class CameraActivity : AppCompatActivity() {
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, selectAnalyzer())
+                        // Use lifecycleScope to launch the analyzer coroutine
+                        it.setAnalyzer(ContextCompat.getMainExecutor(this)) { imageProxy ->
+                            lifecycleScope.launch {
+                                // Call the analyzer
+                                selectAnalyzer().analyze(imageProxy)
+                            }
+                        }
                     }
 
                 imageCapture = ImageCapture.Builder().build()
@@ -143,7 +152,6 @@ class CameraActivity : AppCompatActivity() {
 
                     enableFlash() // Enable flashlight after camera initialization
                     isCameraReady = true
-
 
                 } catch (e: Exception) {
                     Log.e(TAG, "Use case binding failed", e)
@@ -596,9 +604,15 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun closeCamera() {
-        camera?.cameraControl?.enableTorch(false) // Turn off the flashlight
-        cameraProvider?.unbindAll()
-        finish()
+        try {
+            camera?.cameraControl?.enableTorch(false) // Turn off the flashlight
+            cameraProvider?.unbindAll()
+            isCameraReady = false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing camera", e)
+        } finally {
+            finish() // Finish the activity safely
+        }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -611,8 +625,20 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun enableFlash() {
-        camera?.cameraControl?.enableTorch(true)
+        try {
+            // Only enable flash for the rear camera
+            if (cameraSelectorOption == CameraSelector.LENS_FACING_BACK) {
+                // Try enabling the flashlight (torch)
+                camera?.cameraControl?.enableTorch(true)
+            } else {
+                Log.d(TAG, "Flashlight is not available for the front camera.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error enabling flashlight: ${e.message}")
+        }
     }
+
+
 
     companion object {
         private const val TAG = "CameraActivity"
