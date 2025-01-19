@@ -323,6 +323,7 @@ class MainActivity : AppCompatActivity() {
                     val recognitionThreshold = jsonObject.optDouble("recognition_threshold", 0.0)
                     val livenessVariance = jsonObject.optDouble("liveness_variance",0.0)
                     val id = jsonObject.optInt("id", -1)  // Get the ID, default to -1 if not present
+                    val processingTime = jsonObject.optDouble("processing_time",0.0)
 
                     // Round numbers to two decimal places
                     val roundedLightThreshold = String.format("%.2f", lightThreshold)
@@ -339,7 +340,8 @@ class MainActivity : AppCompatActivity() {
 
                     resultTextView.text = when (status) {
                         "error" -> "$message\n$idText\nLight Threshold: $roundedLightThreshold\nRecognition Threshold: $roundedRecognitionThreshold\nLiveness Variance: $roundedLivenessVariance"
-                        "success" -> "$message\n$idText\nTime Attendance: $timeAttendance\nLight Threshold: $roundedLightThreshold\nRecognition Threshold: $roundedRecognitionThreshold\nLiveness Variance: $roundedLivenessVariance"
+                        "success" -> "$message\n$idText\nTime Attendance: $timeAttendance\nLight Threshold: $roundedLightThreshold\n" +
+                                "Recognition Threshold: $roundedRecognitionThreshold\nLiveness Variance: $roundedLivenessVariance\nProcessing Time: $processingTime"
                         else -> "Unknown status: $status\nLight Threshold: $roundedLightThreshold\nRecognition Threshold: $roundedRecognitionThreshold\nLiveness Variance: $roundedLivenessVariance\n$idText"
                     }
                 } catch (e: Exception) {
