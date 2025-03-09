@@ -81,6 +81,7 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
 
         # Compare the new encoding with the existing encoding for the user ID
         distance = np.linalg.norm(existing_encoding - new_encoding)
+        print(f"Distances: {distance}")
         accuracy = 1 - distance
 
         if accuracy >= 0.6:
@@ -98,11 +99,16 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
             distance_end = time.time()
             print(f"Distance calculation time: {distance_end - distance_start:.2f} seconds")
 
+            # Use the minimum distance for accuracy calculation
             min_distance = np.min(distances)
-            if min_distance < 0.5:  # Threshold for matching
+            print(f"Distances: {min_distance}")
+            accuracy = 1 - min_distance  # Calculate accuracy based on the minimum distance
+
+            if accuracy > 0.55:  # Threshold for matching
                 matched_id = face_data['ids'][np.argmin(distances)]
                 response['message'] = f"The face is already enrolled under another ID: {matched_id}."
                 return json.dumps(response)
+
 
         # Add as a new user
         if len(face_data['encodings']) == 0:
@@ -127,10 +133,10 @@ def update_face_encodings(new_photo_path, face_data_file, user_id=None):
 
 
 # Assuming `face_data.pkl` is your data file
-face_data_file = r"C:\Users\user\Desktop\PYTHON\API\SmartFace\face_data.pkl"
-new_photo_path = r"G:\HumanFacesDataset\AI-Generated Images\osama.jpg"
-user_id = 9000  # The ID to update or add
+#face_data_file = "face_data.pkl"
+#new_photo_path = r"C:\Users\osama\Pictures\2.png"
+#user_id = 10001  # The ID to update or add
 
 # Call the function
-# result = update_face_encodings(new_photo_path, face_data_file, user_id=user_id)
-# print(result)
+#result = update_face_encodings(new_photo_path, face_data_file, user_id=user_id)
+#print(result)

@@ -38,6 +38,8 @@ android {
                     install "face_recognition"
 //                    install "deepface"
 //                    install "tensorflow"
+                    install "SQLite4"
+
 //                }
                 }
             }

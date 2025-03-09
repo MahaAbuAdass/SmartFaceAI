@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, Tuple
 import logging
 from concurrent.futures import ThreadPoolExecutor
+import sqlite3
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
